@@ -1,0 +1,45 @@
+{
+  "userId": "REPLACE_WITH_USER_ID",
+  "activities": [
+    {
+      "category": "transport",
+      "type": "car",
+      "subtype": "hybrid",
+      "distance": 25,
+      "description": "Morning commute",
+      "timestamp": "2026-06-08T08:00:00Z"
+    },
+    {
+      "category": "food",
+      "type": "plantBased",
+      "subtype": "vegetables",
+      "amount": 0.4,
+      "description": "Lunch - salad",
+      "timestamp": "2026-06-08T12:30:00Z"
+    },
+    {
+      "category": "energy",
+      "type": "electricity",
+      "subtype": "usAverage",
+      "amount": 20,
+      "description": "Daily home electricity",
+      "timestamp": "2026-06-08T18:00:00Z"
+    },
+    {
+      "category": "transport",
+      "type": "publicTransit",
+      "subtype": "bus",
+      "distance": 10,
+      "description": "Evening errands",
+      "timestamp": "2026-06-08T19:00:00Z"
+    },
+    {
+      "category": "food",
+      "type": "plantBased",
+      "subtype": "tofu",
+      "amount": 0.2,
+      "description": "Dinner - stir fry with tofu",
+      "timestamp": "2026-06-08T20:00:00Z"
+    }
+  ]
+}

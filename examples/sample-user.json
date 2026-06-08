@@ -1,0 +1,17 @@
+{
+  "name": "Alice Green",
+  "email": "alice@example.com",
+  "location": "US",
+  "profile": {
+    "householdSize": 2,
+    "carMilesPerYear": 8000,
+    "carType": "hybrid",
+    "electricityKwhPerMonth": 750,
+    "heatingType": "naturalGas",
+    "heatingUsage": "medium",
+    "dietType": "vegetarian",
+    "flightsPerYear": 2,
+    "averageFlightDistance": 1000,
+    "shoppingBudgetPerMonth": 350
+  }
+}

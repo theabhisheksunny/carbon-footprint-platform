@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Footprint Awareness Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            padding: 40px 0;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .hero {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .feature-title {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .feature-description {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .api-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .api-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .endpoint {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .method.get { background: #61affe; color: white; }
+        .method.post { background: #49cc90; color: white; }
+        .method.put { background: #fca130; color: white; }
+        .method.delete { background: #f93e3e; color: white; }
+
+        .path {
+            font-family: monospace;
+            color: #333;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .cta-section {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 30px 0;
+            opacity: 0.8;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Carbon Footprint Awareness Platform</h1>
+            <p class="tagline">Track, Understand, and Reduce Your Carbon Footprint</p>
+        </header>
+
+        <div class="hero">
+            <h2 style="color: #667eea; margin-bottom: 20px;">Welcome to a Sustainable Future</h2>
+            <p style="font-size: 1.1em; line-height: 1.8; color: #555;">
+                Our platform empowers individuals to understand their environmental impact and take meaningful action.
+                Through personalized insights, science-based calculations, and community support, we make it easy to
+                reduce your carbon footprint and contribute to a healthier planet.
+            </p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">12+</div>
+                <div class="stat-label">Reduction Actions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Activity Categories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">10+</div>
+                <div class="stat-label">Achievements</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Science-Based</div>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3 class="feature-title">Footprint Calculator</h3>
+                <p class="feature-description">
+                    Calculate your baseline carbon footprint based on lifestyle factors including
+                    transportation, energy use, diet, and shopping habits.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3 class="feature-title">Activity Tracking</h3>
+                <p class="feature-description">
+                    Log daily activities and see their real-time carbon impact. Track transportation,
+                    meals, energy usage, and more with automatic CO2 calculations.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💡</div>
+                <h3 class="feature-title">Smart Recommendations</h3>
+                <p class="feature-description">
+                    Get personalized action recommendations based on your highest emission categories.
+                    Focus your efforts where they'll make the biggest impact.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">Action Library</h3>
+                <p class="feature-description">
+                    Browse 12+ curated actions to reduce your footprint. Each includes difficulty rating,
+                    estimated CO2 reduction, and cost implications.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3 class="feature-title">Trend Analysis</h3>
+                <p class="feature-description">
+                    Visualize your emissions over time. See daily, weekly, and monthly trends broken down
+                    by category to understand your patterns.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏆</div>
+                <h3 class="feature-title">Gamification</h3>
+                <p class="feature-description">
+                    Unlock achievements, build streaks, and join challenges. Stay motivated with progress
+                    tracking and community leaderboards.
+                </p>
+            </div>
+        </div>
+
+        <div class="api-section">
+            <h2>🔌 API Endpoints</h2>
+            <p style="margin-bottom: 20px; color: #666;">
+                Our RESTful API makes it easy to integrate carbon tracking into your applications.
+                All endpoints return JSON and use standard HTTP methods.
+            </p>
+
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="path">/api/users</span>
+                <p style="margin-top: 10px; color: #666;">Create a new user and calculate baseline footprint</p>
+            </div>
+
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="path">/api/users/:userId/dashboard</span>
+                <p style="margin-top: 10px; color: #666;">Get complete dashboard with stats and recommendations</p>
+            </div>
+
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="path">/api/activities</span>
+                <p style="margin-top: 10px; color: #666;">Log a carbon-generating activity</p>
+            </div>
+
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="path">/api/actions</span>
+                <p style="margin-top: 10px; color: #666;">Browse available reduction actions</p>
+            </div>
+
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="path">/api/calculator/compare</span>
+                <p style="margin-top: 10px; color: #666;">Compare CO2 emissions between two scenarios</p>
+            </div>
+
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="path">/api/social/leaderboard</span>
+                <p style="margin-top: 10px; color: #666;">View community leaderboard</p>
+            </div>
+        </div>
+
+        <div class="api-section">
+            <h2>🚀 Quick Start</h2>
+            <p style="margin-bottom: 20px; color: #666;">
+                Get started in minutes. No database setup required!
+            </p>
+
+            <h3 style="color: #667eea; margin: 20px 0 10px;">1. Install Dependencies</h3>
+            <pre>npm install</pre>
+
+            <h3 style="color: #667eea; margin: 20px 0 10px;">2. Start the Server</h3>
+            <pre>npm start</pre>
+
+            <h3 style="color: #667eea; margin: 20px 0 10px;">3. Run the Demo</h3>
+            <pre>./demo.sh</pre>
+
+            <h3 style="color: #667eea; margin: 20px 0 10px;">4. Create a User</h3>
+            <pre>curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "location": "US",
+    "profile": {
+      "carMilesPerYear": 10000,
+      "dietType": "vegetarian"
+    }
+  }'</pre>
+        </div>
+
+        <div class="api-section">
+            <h2>📋 Key Features</h2>
+            <ul style="line-height: 2; color: #666; margin-left: 20px;">
+                <li>✅ In-memory database (no setup required)</li>
+                <li>✅ Science-based emission factors (EPA, IPCC)</li>
+                <li>✅ Real-time CO2 calculations</li>
+                <li>✅ Personalized recommendations</li>
+                <li>✅ Activity trends and analytics</li>
+                <li>✅ Achievements and gamification</li>
+                <li>✅ Community challenges and leaderboards</li>
+                <li>✅ Scenario comparison tools</li>
+                <li>✅ Impact equivalents (trees, miles, etc.)</li>
+                <li>✅ Comprehensive API documentation</li>
+            </ul>
+        </div>
+
+        <div class="cta-section">
+            <a href="/API_DOCUMENTATION.md" class="cta-button">📚 View Full Documentation</a>
+            <a href="/health" class="cta-button">💚 Check Server Health</a>
+        </div>
+
+        <footer class="footer">
+            <p>Built with ❤️ for a sustainable future 🌱</p>
+            <p style="margin-top: 10px;">Carbon Footprint Awareness Platform v1.0.0</p>
+        </footer>
+    </div>
+</body>
+</html>
