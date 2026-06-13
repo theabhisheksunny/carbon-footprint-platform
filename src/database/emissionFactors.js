@@ -137,14 +137,16 @@ export const calculators = {
     } else if (type === 'publicTransit') {
       factor = emissionFactors.transport.publicTransit[subtype] || emissionFactors.transport.publicTransit.bus;
     } else if (type === 'flight') {
-      if (distance < 300) {
-        factor = emissionFactors.transport.flight.domestic.short;
-      } else if (distance < 2300) {
-        factor = emissionFactors.transport.flight.domestic.medium;
+      if (subtype === 'international' || (options && options.international)) {
+        factor = emissionFactors.transport.flight.international;
       } else {
-        factor = options.international
-          ? emissionFactors.transport.flight.international
-          : emissionFactors.transport.flight.domestic.long;
+        if (distance < 300) {
+          factor = emissionFactors.transport.flight.domestic.short;
+        } else if (distance < 2300) {
+          factor = emissionFactors.transport.flight.domestic.medium;
+        } else {
+          factor = emissionFactors.transport.flight.domestic.long;
+        }
       }
     } else if (type === 'other') {
       factor = emissionFactors.transport.other[subtype] || 0;
@@ -182,7 +184,7 @@ export const calculators = {
     if (!cat) return 0;
 
     if (useQuantity && cat[subcategory]) {
-      return cat[subcategory];
+      return amountOrDollars * cat[subcategory];
     }
 
     const dollarFactor = cat.averagePerDollar || emissionFactors.consumption.general.averagePerDollar;
@@ -221,32 +223,31 @@ export const calculators = {
     const flightEmissions = this.calculateTransportEmissions('flight', 'domestic', averageFlightDistance) * flightsPerYear;
     total += flightEmissions;
 
-    // Home energy
+    // Home energy (shared resource)
     const electricityEmissions = this.calculateEnergyEmissions('electricity', electricityKwhPerMonth * 12);
-    total += electricityEmissions;
-
-    // Heating (approximate based on usage)
     const heatingMultiplier = { low: 300, medium: 600, high: 900 };
     const heatingAmount = heatingMultiplier[heatingUsage] || 600;
     const heatingEmissions = this.calculateEnergyEmissions('heating', heatingAmount, heatingType);
-    total += heatingEmissions;
+    const homeEnergyEmissions = electricityEmissions + heatingEmissions;
 
-    // Food (approximate based on diet type)
-    const dietEmissions = {
+    // Adjust for household size (shared resources are divided by householdSize but with sharing overhead efficiency)
+    const householdAdjustment = householdSize === 1 ? 1 : 1 + ((householdSize - 1) * 0.5);
+    const homeEnergyPerPerson = (homeEnergyEmissions * householdAdjustment) / householdSize;
+
+    // Food (approximate based on diet type - individual resource)
+    const dietEmissionsTable = {
       'vegan': 1500,
       'vegetarian': 2000,
       'average': 2500,
       'high-meat': 3300
     };
-    total += dietEmissions[dietType] || dietEmissions.average;
+    const dietEmissions = dietEmissionsTable[dietType] || dietEmissionsTable.average;
 
-    // Shopping
+    // Shopping (individual resource)
     const shoppingEmissions = this.calculateConsumptionEmissions('general', null, shoppingBudgetPerMonth * 12);
-    total += shoppingEmissions;
 
-    // Adjust for household size (shared resources)
-    const householdAdjustment = householdSize === 1 ? 1 : 1 + ((householdSize - 1) * 0.5);
-    total = total * householdAdjustment / householdSize;
+    // Sum up individual emissions and shared home energy emissions per person
+    total = carEmissions + flightEmissions + dietEmissions + shoppingEmissions + homeEnergyPerPerson;
 
     return Math.round(total);
   }

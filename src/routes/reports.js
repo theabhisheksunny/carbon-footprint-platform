@@ -87,12 +87,15 @@ router.get('/user/:userId', (req, res) => {
           co2: a.co2Equivalent
         })),
       actions: userActions.map(ua => {
-        const action = db.findById('actions', ua.actionId);
+        let action = db.findById('actions', ua.actionId);
+        if (!action) {
+          action = db.findById('challenges', ua.actionId);
+        }
         return {
-          title: action?.title,
+          title: action?.title || (ua.type === 'challenge' ? 'Challenge' : 'Action'),
           status: ua.status,
           progress: ua.progress,
-          estimatedReduction: action?.estimatedCO2Reduction,
+          estimatedReduction: action?.estimatedCO2Reduction || 0,
           startDate: ua.startDate,
           completedDate: ua.completedDate
         };
@@ -174,9 +177,14 @@ router.get('/user/:userId/export', (req, res) => {
     if (type === 'activities') {
       const activities = db.getUserActivities(userId);
 
-      let csv = 'Date,Category,Type,Subtype,Amount,Distance,CO2 (kg),Description\n';
+      let csv = 'Date,Category,Type,Subtype,Amount,Distance,Quantity,Unit,CO2 (kg),Description\n';
       activities.forEach(act => {
-        csv += `${act.timestamp},${act.category},${act.type},${act.subtype || ''},${act.amount || ''},${act.distance || ''},${act.co2Equivalent},"${act.description || ''}"\n`;
+        const amt = act.amount !== undefined && act.amount !== null ? act.amount : '';
+        const dist = act.distance !== undefined && act.distance !== null ? act.distance : '';
+        const qty = act.quantity !== undefined && act.quantity !== null ? act.quantity : '';
+        const unt = act.unit || '';
+        const escapedDesc = (act.description || '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
+        csv += `${act.timestamp},${act.category},${act.type},${act.subtype || ''},${amt},${dist},${qty},${unt},${act.co2Equivalent},"${escapedDesc}"\n`;
       });
 
       res.type('text/csv')
@@ -187,8 +195,12 @@ router.get('/user/:userId/export', (req, res) => {
 
       let csv = 'Action,Status,Progress,Start Date,Completed Date,Estimated Reduction (kg/year)\n';
       userActions.forEach(ua => {
-        const action = db.findById('actions', ua.actionId);
-        csv += `"${action?.title}",${ua.status},${ua.progress},${ua.startDate},${ua.completedDate || ''},${action?.estimatedCO2Reduction}\n`;
+        let action = db.findById('actions', ua.actionId);
+        if (!action) {
+          action = db.findById('challenges', ua.actionId);
+        }
+        const actionTitle = (action?.title || (ua.type === 'challenge' ? 'Challenge' : 'Action')).replace(/"/g, '""').replace(/\r?\n/g, ' ');
+        csv += `"${actionTitle}",${ua.status},${ua.progress},${ua.startDate},${ua.completedDate || ''},${action?.estimatedCO2Reduction || 0}\n`;
       });
 
       res.type('text/csv')

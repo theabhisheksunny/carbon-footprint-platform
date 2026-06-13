@@ -1,6 +1,7 @@
 import express from 'express';
 import db from '../database/inMemoryDB.js';
 import { calculators, regionalAverages } from '../database/emissionFactors.js';
+import { validateEmail, validateEmailDetailed, validateUserProfile } from '../utils/validation.js';
 
 const router = express.Router();
 
@@ -14,8 +15,31 @@ router.post('/', (req, res) => {
       profile
     } = req.body;
 
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Name and email are required' });
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return res.status(400).json({ error: 'Valid name is required' });
+    }
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const emailVal = validateEmailDetailed(email);
+    if (!emailVal.valid) {
+      return res.status(400).json({ error: emailVal.error });
+    }
+
+    // Validate location
+    const validLocations = ['US', 'Canada', 'UK', 'Germany', 'France', 'China', 'India', 'Brazil', 'Australia', 'World'];
+    if (location && !validLocations.includes(location)) {
+      return res.status(400).json({ error: 'Unsupported location/region' });
+    }
+
+    // Validate profile
+    if (profile) {
+      const profileVal = validateUserProfile(profile);
+      if (!profileVal.valid) {
+        return res.status(400).json({ error: profileVal.error });
+      }
     }
 
     // Check if user already exists
@@ -73,15 +97,55 @@ router.put('/:userId', (req, res) => {
     const { userId } = req.params;
     const updates = req.body;
 
-    const user = db.update('users', userId, updates);
-
+    const user = db.findById('users', userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Validate email if it's updated
+    if (updates.email !== undefined) {
+      const emailVal = validateEmailDetailed(updates.email);
+      if (!emailVal.valid) {
+        return res.status(400).json({ error: emailVal.error });
+      }
+      const existingUser = db.findByQuery('users', { email: updates.email });
+      if (existingUser.length > 0 && existingUser[0].id !== userId) {
+        return res.status(409).json({ error: 'User with this email already exists' });
+      }
+    }
+
+    // Validate profile if it's updated and recalculate baseline
+    if (updates.profile !== undefined) {
+      const profileVal = validateUserProfile(updates.profile);
+      if (!profileVal.valid) {
+        return res.status(400).json({ error: profileVal.error });
+      }
+      const mergedProfile = { ...user.profile, ...updates.profile };
+      updates.profile = mergedProfile;
+      updates.baselineFootprint = calculators.calculateBaselineFootprint(mergedProfile);
+    }
+
+    // Validate name if it's updated
+    if (updates.name !== undefined) {
+      if (typeof updates.name !== 'string' || updates.name.trim() === '') {
+        return res.status(400).json({ error: 'Valid name is required' });
+      }
+    }
+
+    // Validate location if it's updated
+    if (updates.location !== undefined) {
+      const validLocations = ['US', 'Canada', 'UK', 'Germany', 'France', 'China', 'India', 'Brazil', 'Australia', 'World'];
+      if (!validLocations.includes(updates.location)) {
+        return res.status(400).json({ error: 'Unsupported location/region' });
+      }
+      updates.regionalAverage = regionalAverages[updates.location];
+    }
+
+    const updatedUser = db.update('users', userId, updates);
+
     res.json({
       success: true,
-      user,
+      user: updatedUser,
       message: 'User updated successfully'
     });
   } catch (error) {
@@ -181,7 +245,10 @@ router.get('/:userId/dashboard', (req, res) => {
         stats,
         recentActivities,
         activeActions: activeActions.map(ua => {
-          const action = db.findById('actions', ua.actionId);
+          let action = db.findById('actions', ua.actionId);
+          if (!action) {
+            action = db.findById('challenges', ua.actionId);
+          }
           return {
             ...ua,
             actionDetails: action
@@ -205,12 +272,18 @@ router.delete('/:userId', (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Clean up user's activities and actions
+    // Clean up user's activities, actions, routines, and offsets
     const activities = db.findByQuery('activities', { userId });
     activities.forEach(a => db.delete('activities', a.id));
 
     const userActions = db.findByQuery('userActions', { userId });
     userActions.forEach(ua => db.delete('userActions', ua.id));
+
+    const routines = db.findByQuery('routines', { userId });
+    routines.forEach(r => db.delete('routines', r.id));
+
+    const userOffsets = db.findByQuery('userOffsets', { userId });
+    userOffsets.forEach(uo => db.delete('userOffsets', uo.id));
 
     res.json({
       success: true,

@@ -183,6 +183,12 @@ router.put('/challenges/:challengeId/progress', (req, res) => {
       return res.status(400).json({ error: 'userId is required' });
     }
 
+    if (progress !== undefined) {
+      if (typeof progress !== 'number' || isNaN(progress) || progress < 0 || progress > 100) {
+        return res.status(400).json({ error: 'progress must be a number between 0 and 100' });
+      }
+    }
+
     const participation = db.findByQuery('userActions', {
       userId,
       actionId: challengeId,
@@ -420,6 +426,85 @@ router.get('/user/:userId/comparison', (req, res) => {
           ? "You're doing better than average!"
           : "Keep it up! You're on the right track."
       }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all offset projects
+router.get('/offsets', (req, res) => {
+  try {
+    const offsets = db.findAll('offsets');
+    res.json({ success: true, count: offsets.length, offsets });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user offset purchases
+router.get('/offsets/user/:userId', (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = db.findById('users', userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const purchases = db.findByQuery('userOffsets', { userId });
+    const totalOffsetAmount = purchases.reduce((sum, p) => sum + (p.offsetAmount || 0), 0);
+    res.json({ success: true, count: purchases.length, totalOffsetAmount, purchases });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Purchase a carbon offset using EcoPoints
+router.post('/offsets/purchase', (req, res) => {
+  try {
+    const { userId, offsetId } = req.body;
+    if (!userId || !offsetId) {
+      return res.status(400).json({ error: 'userId and offsetId are required' });
+    }
+
+    const user = db.findById('users', userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const offset = db.findById('offsets', offsetId);
+    if (!offset) {
+      return res.status(404).json({ error: 'Offset project not found' });
+    }
+
+    const cost = offset.cost || 0;
+    const userPoints = user.ecoPoints || 0;
+
+    if (userPoints < cost) {
+      return res.status(400).json({ error: `Insufficient EcoPoints. Required: ${cost}, available: ${userPoints}` });
+    }
+
+    // Deduct cost and award 100 XP for carbon offsetting
+    const updatedUser = db.awardXpAndPoints(userId, 100, -cost);
+
+    // Record the purchase
+    const userOffset = db.create('userOffsets', {
+      userId,
+      offsetId,
+      projectTitle: offset.title,
+      offsetAmount: offset.offsetAmount,
+      pointsSpent: cost,
+      category: offset.category
+    });
+
+    // Update user's total CO2 reduced
+    const newReduced = (user.totalCO2Reduced || 0) + offset.offsetAmount;
+    db.update('users', userId, { totalCO2Reduced: newReduced });
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully purchased ${offset.title}! Offset ${offset.offsetAmount} kg CO2.`,
+      userOffset,
+      user: db.findById('users', userId)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

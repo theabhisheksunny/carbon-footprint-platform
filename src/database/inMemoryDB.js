@@ -12,9 +12,49 @@ class InMemoryDatabase {
     this.userActions = new Map();
     this.achievements = new Map();
     this.challenges = new Map();
+    this.routines = new Map();
+    this.offsets = new Map();
+    this.userOffsets = new Map();
 
     // Initialize with seed data
     this.seedData();
+  }
+
+  // Award XP and EcoPoints, calculate level progress, and unlock level badges
+  awardXpAndPoints(userId, xp, points) {
+    const user = this.users.get(userId);
+    if (!user) return null;
+
+    const currentXp = (user.xp || 0) + xp;
+    const currentPoints = (user.ecoPoints || 0) + points;
+
+    // Progress Level formula: Level = Math.floor(Math.sqrt(currentXp / 100)) + 1
+    const newLevel = Math.floor(Math.sqrt(currentXp / 100)) + 1;
+    const oldLevel = user.level || 1;
+
+    const updates = {
+      xp: currentXp,
+      ecoPoints: currentPoints,
+      level: newLevel
+    };
+
+    if (newLevel > oldLevel) {
+      const achievements = [...(user.achievements || [])];
+      const levelBadge = `level-${newLevel}`;
+      if (!achievements.includes(levelBadge)) {
+        achievements.push(levelBadge);
+        updates.achievements = achievements;
+      }
+    }
+
+    // Direct update to users map
+    const updatedUser = {
+      ...user,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
   }
 
   // Generic CRUD operations
@@ -22,6 +62,22 @@ class InMemoryDatabase {
     const id = data.id || uuidv4();
     const item = { ...data, id, createdAt: new Date().toISOString() };
     this[collection].set(id, item);
+
+    // Auto-update user streak if activity is logged
+    if (collection === 'activities' && data.userId) {
+      this.updateUserStreakProperty(data.userId);
+      // Log gives 20 XP and 10 EcoPoints
+      this.awardXpAndPoints(data.userId, 20, 10);
+    }
+
+    // Initialize XP / EcoPoints / Level for users
+    if (collection === 'users') {
+      if (item.xp === undefined) item.xp = 0;
+      if (item.ecoPoints === undefined) item.ecoPoints = 100; // Welcome bonus
+      if (item.level === undefined) item.level = 1;
+      this.users.set(id, item);
+    }
+
     return item;
   }
 
@@ -56,11 +112,39 @@ class InMemoryDatabase {
       updatedAt: new Date().toISOString()
     };
     this[collection].set(id, updated);
+
+    // Auto-update user streak if activity is updated
+    if (collection === 'activities' && existing.userId) {
+      this.updateUserStreakProperty(existing.userId);
+    }
+
     return updated;
   }
 
   delete(collection, id) {
-    return this[collection].delete(id);
+    const existing = this[collection].get(id);
+    const result = this[collection].delete(id);
+
+    // Auto-update user streak if activity is deleted
+    if (result && collection === 'activities' && existing && existing.userId) {
+      this.updateUserStreakProperty(existing.userId);
+    }
+
+    return result;
+  }
+
+  updateUserStreakProperty(userId) {
+    const user = this.findById('users', userId);
+    if (user) {
+      const streak = this.calculateUserStreak(userId).current;
+      // We directly update user object to avoid infinite loop checks
+      const updatedUser = {
+        ...user,
+        streak,
+        updatedAt: new Date().toISOString()
+      };
+      this.users.set(userId, updatedUser);
+    }
   }
 
   // Seed initial data
@@ -319,6 +403,18 @@ class InMemoryDatabase {
     challengesData.forEach(challenge => {
       this.challenges.set(challenge.id, { ...challenge, createdAt: new Date().toISOString() });
     });
+
+    // Seed Offsets Data
+    const offsetsData = [
+      { id: 'off-1', title: 'Amazon Rainforest Protection', description: 'Protects threatened forestry in the Brazilian Amazon basin.', cost: 300, offsetAmount: 200, category: 'forestry', icon: 'fa-tree' },
+      { id: 'off-2', title: 'Wind Farms in West Texas', description: 'Supports displacement of coal-fired electricity with wind turbine grids.', cost: 600, offsetAmount: 500, category: 'energy', icon: 'fa-wind' },
+      { id: 'off-3', title: 'Cookstoves for Kenyan Communities', description: 'Replaces open-fire cooking with clean, efficient bio-burners.', cost: 1000, offsetAmount: 1000, category: 'community', icon: 'fa-fire-burner' },
+      { id: 'off-4', title: 'Marine Kelp Cultivation', description: 'Supports ocean reforestation to capture deep-sea carbon.', cost: 1800, offsetAmount: 2000, category: 'ocean', icon: 'fa-water' }
+    ];
+
+    offsetsData.forEach(offset => {
+      this.offsets.set(offset.id, { ...offset, createdAt: new Date().toISOString() });
+    });
   }
 
   // Utility methods for complex queries
@@ -359,22 +455,72 @@ class InMemoryDatabase {
       .slice(0, limit);
   }
 
+  calculateUserStreak(userId) {
+    const activities = this.getUserActivities(userId);
+    if (activities.length === 0) return { current: 0, longest: 0 };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Group activities by date
+    const activityDates = new Set();
+    activities.forEach(act => {
+      const date = new Date(act.timestamp);
+      date.setHours(0, 0, 0, 0);
+      activityDates.add(date.getTime());
+    });
+
+    const sortedDates = Array.from(activityDates).sort((a, b) => b - a);
+
+    let currentStreak = 0;
+    if (sortedDates.length > 0) {
+      const latestDate = new Date(sortedDates[0]);
+      const diffFromToday = Math.round((today.getTime() - latestDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffFromToday <= 1) { // 0 if logged today, 1 if logged yesterday
+        currentStreak = 1;
+        for (let i = 1; i < sortedDates.length; i++) {
+          const diff = Math.round((sortedDates[i - 1] - sortedDates[i]) / (1000 * 60 * 60 * 24));
+          if (diff === 1) {
+            currentStreak++;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    // Calculate longest streak
+    let longestStreak = 0;
+    let tempStreak = 1;
+    for (let i = 1; i < sortedDates.length; i++) {
+      const diff = Math.round((sortedDates[i - 1] - sortedDates[i]) / (1000 * 60 * 60 * 24));
+      if (diff === 1) {
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
+      } else {
+        tempStreak = 1;
+      }
+    }
+    longestStreak = Math.max(longestStreak, tempStreak);
+    if (sortedDates.length === 1) {
+      longestStreak = 1;
+    }
+
+    return { current: currentStreak, longest: longestStreak };
+  }
+
   calculateUserStats(userId) {
     const activities = this.getUserActivities(userId);
     const userActions = this.getUserActions(userId);
     const user = this.findById('users', userId);
 
     const totalCO2 = activities.reduce((sum, act) => sum + (act.co2Equivalent || 0), 0);
-    const totalReduced = userActions
-      .filter(ua => ua.status === 'active' || ua.status === 'completed')
-      .reduce((sum, ua) => {
-        const action = this.findById('actions', ua.actionId);
-        return sum + (action?.estimatedCO2Reduction || 0);
-      }, 0);
+    const totalReduced = user ? (user.totalCO2Reduced || 0) : 0;
 
     const last30Days = activities.filter(a => {
       const daysDiff = (Date.now() - new Date(a.timestamp)) / (1000 * 60 * 60 * 24);
-      return daysDiff <= 30;
+      return daysDiff >= 0 && daysDiff <= 30;
     });
 
     const co2Last30Days = last30Days.reduce((sum, act) => sum + (act.co2Equivalent || 0), 0);
@@ -399,6 +545,9 @@ class InMemoryDatabase {
     this.userActions.clear();
     this.achievements.clear();
     this.challenges.clear();
+    this.routines.clear();
+    this.offsets.clear();
+    this.userOffsets.clear();
     this.seedData();
   }
 }

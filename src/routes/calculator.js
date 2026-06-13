@@ -1,5 +1,6 @@
 import express from 'express';
 import { calculators, emissionFactors, regionalAverages } from '../database/emissionFactors.js';
+import { validateActivity, validateUserProfile } from '../utils/validation.js';
 
 const router = express.Router();
 
@@ -10,6 +11,11 @@ router.post('/calculate', (req, res) => {
 
     if (!category || !type) {
       return res.status(400).json({ error: 'category and type are required' });
+    }
+
+    const valResult = validateActivity({ category, type, subtype, amount, distance, quantity });
+    if (!valResult.valid) {
+      return res.status(400).json({ error: valResult.error });
     }
 
     let co2Equivalent = 0;
@@ -25,7 +31,7 @@ router.post('/calculate', (req, res) => {
         co2Equivalent = calculators.calculateFoodEmissions(type, subtype, amount || quantity);
         break;
       case 'shopping':
-        co2Equivalent = calculators.calculateConsumptionEmissions(type, subtype, amount || quantity);
+        co2Equivalent = calculators.calculateConsumptionEmissions(type, subtype, quantity > 0 ? quantity : amount, quantity > 0);
         break;
       case 'waste':
         co2Equivalent = calculators.calculateWasteEmissions(type, amount || quantity);
@@ -54,6 +60,10 @@ router.post('/calculate', (req, res) => {
 router.post('/baseline', (req, res) => {
   try {
     const profile = req.body;
+    const valResult = validateUserProfile(profile);
+    if (!valResult.valid) {
+      return res.status(400).json({ error: valResult.error });
+    }
 
     const baselineFootprint = calculators.calculateBaselineFootprint(profile);
     const location = profile.location || 'US';
@@ -127,6 +137,16 @@ router.post('/compare', (req, res) => {
       return res.status(400).json({ error: 'Both scenario1 and scenario2 are required' });
     }
 
+    const valResult1 = validateActivity(scenario1);
+    if (!valResult1.valid) {
+      return res.status(400).json({ error: `scenario1: ${valResult1.error}` });
+    }
+
+    const valResult2 = validateActivity(scenario2);
+    if (!valResult2.valid) {
+      return res.status(400).json({ error: `scenario2: ${valResult2.error}` });
+    }
+
     // Calculate emissions for both scenarios
     let co2Scenario1 = 0;
     let co2Scenario2 = 0;
@@ -146,7 +166,7 @@ router.post('/compare', (req, res) => {
           total = calculators.calculateFoodEmissions(type, subtype, amount || quantity);
           break;
         case 'shopping':
-          total = calculators.calculateConsumptionEmissions(type, subtype, amount || quantity);
+          total = calculators.calculateConsumptionEmissions(type, subtype, quantity > 0 ? quantity : amount, quantity > 0);
           break;
         case 'waste':
           total = calculators.calculateWasteEmissions(type, amount || quantity);
@@ -189,8 +209,8 @@ router.post('/equivalents', (req, res) => {
   try {
     const { co2Amount } = req.body;
 
-    if (!co2Amount || co2Amount <= 0) {
-      return res.status(400).json({ error: 'Valid co2Amount is required' });
+    if (typeof co2Amount !== 'number' || isNaN(co2Amount) || co2Amount <= 0) {
+      return res.status(400).json({ error: 'Valid positive numeric co2Amount is required' });
     }
 
     // Conversion factors

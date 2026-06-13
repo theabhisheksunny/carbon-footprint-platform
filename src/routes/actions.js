@@ -206,6 +206,21 @@ router.put('/user/:userId/actions/:userActionId', (req, res) => {
     const { userId, userActionId } = req.params;
     const updates = req.body;
 
+    // Validate progress updates
+    if (updates.progress !== undefined) {
+      if (typeof updates.progress !== 'number' || isNaN(updates.progress) || updates.progress < 0 || updates.progress > 100) {
+        return res.status(400).json({ error: 'progress must be a number between 0 and 100' });
+      }
+    }
+
+    // Validate status updates
+    if (updates.status !== undefined) {
+      const validStatuses = ['active', 'completed', 'abandoned'];
+      if (!validStatuses.includes(updates.status)) {
+        return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
+      }
+    }
+
     const userAction = db.findById('userActions', userActionId);
     if (!userAction) {
       return res.status(404).json({ error: 'User action not found' });
@@ -215,18 +230,26 @@ router.put('/user/:userId/actions/:userActionId', (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    // If progress reaches 100%, transition status to completed
+    if (updates.progress === 100 && userAction.status !== 'completed') {
+      updates.status = 'completed';
+    }
+
     // If completing action, calculate impact
     if (updates.status === 'completed' && userAction.status !== 'completed') {
-      const action = db.findById('actions', userAction.actionId);
+      let action = db.findById('actions', userAction.actionId);
+      if (!action) {
+        action = db.findById('challenges', userAction.actionId);
+      }
       const user = db.findById('users', userId);
 
       if (action && user) {
         // Update user's total CO2 reduced
-        const newTotal = (user.totalCO2Reduced || 0) + action.estimatedCO2Reduction;
+        const newTotal = (user.totalCO2Reduced || 0) + (action.estimatedCO2Reduction || 0);
         db.update('users', userId, { totalCO2Reduced: newTotal });
 
         updates.completedDate = new Date().toISOString();
-        updates.measuredImpact = action.estimatedCO2Reduction;
+        updates.measuredImpact = action.estimatedCO2Reduction || 0;
       }
     }
 
@@ -248,6 +271,13 @@ router.post('/user/:userId/actions/:userActionId/complete', (req, res) => {
     const { userId, userActionId } = req.params;
     const { notes, actualImpact } = req.body;
 
+    // Validate actualImpact
+    if (actualImpact !== undefined) {
+      if (typeof actualImpact !== 'number' || isNaN(actualImpact) || actualImpact < 0) {
+        return res.status(400).json({ error: 'actualImpact must be a non-negative number' });
+      }
+    }
+
     const userAction = db.findById('userActions', userActionId);
     if (!userAction) {
       return res.status(404).json({ error: 'User action not found' });
@@ -257,7 +287,10 @@ router.post('/user/:userId/actions/:userActionId/complete', (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const action = db.findById('actions', userAction.actionId);
+    let action = db.findById('actions', userAction.actionId);
+    if (!action) {
+      action = db.findById('challenges', userAction.actionId);
+    }
     const user = db.findById('users', userId);
 
     if (!action || !user) {
@@ -265,7 +298,7 @@ router.post('/user/:userId/actions/:userActionId/complete', (req, res) => {
     }
 
     // Calculate impact
-    const measuredImpact = actualImpact || action.estimatedCO2Reduction;
+    const measuredImpact = actualImpact || action.estimatedCO2Reduction || 0;
 
     // Update user's total CO2 reduced
     const newTotal = (user.totalCO2Reduced || 0) + measuredImpact;
