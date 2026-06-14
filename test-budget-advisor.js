@@ -128,7 +128,7 @@ try {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      name: 'Integration User',
+      name: `Integration User ${Date.now()}`,
       email: `integration.${Date.now()}@example.com`,
       location: 'US',
       profile: { householdSize: 1 }
