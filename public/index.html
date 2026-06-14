@@ -2327,6 +2327,29 @@
             }
         }
 
+        function getMyProfileIds() {
+            try {
+                const ids = localStorage.getItem('myProfileIds');
+                return ids ? JSON.parse(ids) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function addMyProfileId(userId) {
+            const ids = getMyProfileIds();
+            if (!ids.includes(userId)) {
+                ids.push(userId);
+                localStorage.setItem('myProfileIds', JSON.stringify(ids));
+            }
+        }
+
+        function removeMyProfileId(userId) {
+            let ids = getMyProfileIds();
+            ids = ids.filter(id => id !== userId);
+            localStorage.setItem('myProfileIds', JSON.stringify(ids));
+        }
+
         function openProfileSelectionOverlay() {
             const overlay = document.getElementById('profile-selection-overlay');
             if (overlay) {
@@ -2360,7 +2383,9 @@
         function cancelOnboardingWizard() {
             closeOnboardingWizard();
             if (!currentUser) {
-                if (usersList.length > 0) {
+                const myProfileIds = getMyProfileIds();
+                const filteredUsersList = usersList.filter(user => myProfileIds.includes(user.id));
+                if (filteredUsersList.length > 0) {
                     openProfileSelectionOverlay();
                 } else {
                     openOnboardingWizard();
@@ -2387,8 +2412,11 @@
                 if (modalSelector) {
                     modalSelector.innerHTML = defaultOptionHtml;
                 }
+
+                const myProfileIds = getMyProfileIds();
+                const filteredUsersList = usersList.filter(user => myProfileIds.includes(user.id));
                 
-                usersList.forEach(user => {
+                filteredUsersList.forEach(user => {
                     const opt = document.createElement('option');
                     opt.value = user.id;
                     opt.textContent = user.name;
@@ -2403,17 +2431,17 @@
                 });
 
                 const savedProfileId = localStorage.getItem('activeProfileId');
-                const savedUserExists = savedProfileId && usersList.some(u => u.id === savedProfileId);
+                const savedUserExists = savedProfileId && filteredUsersList.some(u => u.id === savedProfileId);
 
                 if (savedUserExists) {
-                    currentUser = usersList.find(u => u.id === savedProfileId);
+                    currentUser = filteredUsersList.find(u => u.id === savedProfileId);
                     selector.value = savedProfileId;
                     await selectUser(savedProfileId);
                     closeProfileSelectionOverlay();
                 } else {
                     currentUser = null;
                     selector.value = "";
-                    if (usersList.length > 0) {
+                    if (filteredUsersList.length > 0) {
                         openProfileSelectionOverlay();
                     } else {
                         closeProfileSelectionOverlay();
@@ -2428,6 +2456,10 @@
 
         async function selectUser(userId) {
             try {
+                const myProfileIds = getMyProfileIds();
+                if (!myProfileIds.includes(userId)) {
+                    throw new Error('Unauthorized profile access');
+                }
                 const response = await fetch(`${apiBaseUrl}/users/${userId}?t=${Date.now()}`);
                 if (!response.ok) throw new Error('User not found');
                 const data = await response.json();
@@ -2622,6 +2654,9 @@
                 const data = await response.json();
                 showToast('Welcome aboard! Baseline footprint calculated.');
                 closeOnboardingWizard();
+                
+                // Save profile ID locally to this browser session
+                addMyProfileId(data.user.id);
                 
                 // Add to dropdown list and select
                 await loadUsers();
@@ -3871,6 +3906,7 @@
                 });
                 if (response.ok) {
                     showToast(`Successfully deleted profile: ${currentUser.name}`);
+                    removeMyProfileId(currentUser.id);
                     localStorage.removeItem('activeProfileId');
                     currentUser = null;
                     await loadUsers(); // reload list
