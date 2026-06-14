@@ -141,12 +141,16 @@ try {
   }
   const registerData = await registerRes.json();
   const integrationUserId = registerData.user.id;
+  const token = registerData.token;
   console.log(`  ✓ Created integration user via API (ID: ${integrationUserId})`);
 
   // Log activity via POST request
   const activityRes = await fetch(`${serverUrl}/activities`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-User-Token': token
+    },
     body: JSON.stringify({
       userId: integrationUserId,
       category: 'shopping',
@@ -167,7 +171,11 @@ try {
   console.log(`  ✓ Logged shopping activity via API (CO2: ${activityData.activity.co2Equivalent} kg)`);
 
   // Request CSV Export
-  const exportRes = await fetch(`${serverUrl}/reports/user/${integrationUserId}/export?type=activities`);
+  const exportRes = await fetch(`${serverUrl}/reports/user/${integrationUserId}/export?type=activities`, {
+    headers: {
+      'X-User-Token': token
+    }
+  });
   if (!exportRes.ok) {
     const err = await exportRes.json();
     throw new Error(`Failed to fetch CSV export: ${err.error}`);

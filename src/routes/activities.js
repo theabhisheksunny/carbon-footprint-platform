@@ -2,8 +2,11 @@ import express from 'express';
 import db from '../database/inMemoryDB.js';
 import { calculators } from '../database/emissionFactors.js';
 import { validateActivity } from '../utils/validation.js';
+import { authenticateUser } from '../utils/auth.js';
 
 const router = express.Router();
+
+router.use(authenticateUser);
 
 // Log a new activity
 router.post('/', (req, res) => {

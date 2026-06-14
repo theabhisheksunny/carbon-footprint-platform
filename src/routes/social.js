@@ -1,7 +1,10 @@
 import express from 'express';
 import db from '../database/inMemoryDB.js';
+import { authenticateUser } from '../utils/auth.js';
 
 const router = express.Router();
+
+router.use(['/user/:userId', '/offsets/user/:userId'], authenticateUser);
 
 // Get leaderboard
 router.get('/leaderboard', (req, res) => {
@@ -74,7 +77,7 @@ router.get('/challenges/:challengeId', (req, res) => {
 });
 
 // Join a challenge
-router.post('/challenges/:challengeId/join', (req, res) => {
+router.post('/challenges/:challengeId/join', authenticateUser, (req, res) => {
   try {
     const { challengeId } = req.params;
     const { userId } = req.body;
@@ -174,7 +177,7 @@ router.get('/user/:userId/challenges', (req, res) => {
 });
 
 // Update challenge progress
-router.put('/challenges/:challengeId/progress', (req, res) => {
+router.put('/challenges/:challengeId/progress', authenticateUser, (req, res) => {
   try {
     const { challengeId } = req.params;
     const { userId, progress, notes } = req.body;
@@ -233,7 +236,7 @@ router.put('/challenges/:challengeId/progress', (req, res) => {
 });
 
 // Leave a challenge
-router.post('/challenges/:challengeId/leave', (req, res) => {
+router.post('/challenges/:challengeId/leave', authenticateUser, (req, res) => {
   try {
     const { challengeId } = req.params;
     const { userId } = req.body;
@@ -459,7 +462,7 @@ router.get('/offsets/user/:userId', (req, res) => {
 });
 
 // Purchase a carbon offset using EcoPoints
-router.post('/offsets/purchase', (req, res) => {
+router.post('/offsets/purchase', authenticateUser, (req, res) => {
   try {
     const { userId, offsetId } = req.body;
     if (!userId || !offsetId) {

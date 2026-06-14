@@ -1,7 +1,10 @@
 import express from 'express';
 import db from '../database/inMemoryDB.js';
+import { authenticateUser } from '../utils/auth.js';
 
 const router = express.Router();
+
+router.use(authenticateUser);
 
 // Generate user report
 router.get('/user/:userId', (req, res) => {

@@ -1,8 +1,11 @@
 import express from 'express';
 import db from '../database/inMemoryDB.js';
 import { calculators, regionalAverages } from '../database/emissionFactors.js';
+import { authenticateUser } from '../utils/auth.js';
 
 const router = express.Router();
+
+router.use(authenticateUser);
 
 // Get personalized insights for a user
 router.get('/user/:userId', (req, res) => {

@@ -2076,6 +2076,52 @@
 
         const apiBaseUrl = '/api';
 
+        // Intercept global fetch to inject X-User-Token header automatically for user-specific API calls
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+            let url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+            
+            if (url.startsWith(apiBaseUrl) || url.startsWith('/api/')) {
+                let userId = null;
+                if (currentUser && currentUser.id) {
+                    userId = currentUser.id;
+                }
+                
+                const userPathMatch = url.match(/(?:users|user|activities\/user)\/([a-zA-Z0-9\-]+)/);
+                if (userPathMatch && userPathMatch[1]) {
+                    userId = userPathMatch[1];
+                }
+
+                // If still no userId, check body
+                if (!userId && init && init.body && typeof init.body === 'string') {
+                    try {
+                        const parsed = JSON.parse(init.body);
+                        if (parsed.userId) {
+                            userId = parsed.userId;
+                        } else if (parsed.activities && parsed.activities.length > 0 && parsed.activities[0].userId) {
+                            userId = parsed.activities[0].userId;
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+
+                if (userId) {
+                    const token = localStorage.getItem(`token_${userId}`);
+                    if (token) {
+                        init = init || {};
+                        init.headers = init.headers || {};
+                        if (init.headers instanceof Headers) {
+                            init.headers.set('X-User-Token', token);
+                        } else {
+                            init.headers['X-User-Token'] = token;
+                        }
+                    }
+                }
+            }
+            return originalFetch.apply(this, arguments);
+        };
+
         // Log category field structures for dynamic rendering
         const categoryFormFields = {
             transport: `
@@ -2348,6 +2394,16 @@
             let ids = getMyProfileIds();
             ids = ids.filter(id => id !== userId);
             localStorage.setItem('myProfileIds', JSON.stringify(ids));
+        }
+
+        function escapeHtml(text) {
+            if (typeof text !== 'string') return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         function openProfileSelectionOverlay() {
@@ -2655,6 +2711,11 @@
                 showToast('Welcome aboard! Baseline footprint calculated.');
                 closeOnboardingWizard();
                 
+                // Save token locally first
+                if (data.token) {
+                    localStorage.setItem(`token_${data.user.id}`, data.token);
+                }
+
                 // Save profile ID locally to this browser session
                 addMyProfileId(data.user.id);
                 
@@ -3314,7 +3375,7 @@
                 
                 div.innerHTML = `
                     <div class="leaderboard-rank ${rankClass}">${index + 1}</div>
-                    <div class="leaderboard-name">${item.name} ${isMe ? '<span style="color:var(--primary); font-size:0.8rem;">(You)</span>' : ''}</div>
+                    <div class="leaderboard-name">${escapeHtml(item.name)} ${isMe ? '<span style="color:var(--primary); font-size:0.8rem;">(You)</span>' : ''}</div>
                     <div class="leaderboard-val">
                         <span>${item.totalReduction} kg</span>
                         <p>Reduced CO2</p>
@@ -3547,7 +3608,7 @@
 
                         item.innerHTML = `
                             <div class="flex-col" style="text-align: left; gap: 2px;">
-                                <span style="font-weight: 600; color: var(--text-primary);">${r.name}</span>
+                                <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(r.name)}</span>
                                 <span style="font-size: 0.7rem; color: var(--text-muted);">${r.category.toUpperCase()} • ${valText}</span>
                             </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
@@ -3906,7 +3967,9 @@
                 });
                 if (response.ok) {
                     showToast(`Successfully deleted profile: ${currentUser.name}`);
-                    removeMyProfileId(currentUser.id);
+                    const deletedId = currentUser.id;
+                    removeMyProfileId(deletedId);
+                    localStorage.removeItem(`token_${deletedId}`);
                     localStorage.removeItem('activeProfileId');
                     currentUser = null;
                     await loadUsers(); // reload list
@@ -3966,7 +4029,7 @@
             userMsg.className = 'chat-msg-user';
             userMsg.innerHTML = `
                 <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 12px 16px; border-radius: 16px 0 16px 16px; font-size: 0.85rem; line-height: 1.5; color: var(--text-primary);">
-                    ${message}
+                    ${escapeHtml(message)}
                 </div>
                 <div style="width: 28px; height: 28px; background: rgba(255,255,255,0.05); color: var(--text-muted); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0;">
                     <i class="fa-solid fa-user"></i>

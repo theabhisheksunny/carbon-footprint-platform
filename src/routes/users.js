@@ -1,7 +1,9 @@
 import express from 'express';
+import crypto from 'crypto';
 import db from '../database/inMemoryDB.js';
 import { calculators, regionalAverages } from '../database/emissionFactors.js';
 import { validateEmail, validateEmailDetailed, validateUserProfile } from '../utils/validation.js';
+import { authenticateUser } from '../utils/auth.js';
 
 const router = express.Router();
 
@@ -59,6 +61,8 @@ router.post('/', (req, res) => {
     const baselineFootprint = calculators.calculateBaselineFootprint(profile || {});
     const regionalAverage = regionalAverages[location] || regionalAverages['World'];
 
+    const token = crypto.randomUUID();
+
     const user = db.create('users', {
       name,
       email,
@@ -69,12 +73,14 @@ router.post('/', (req, res) => {
       totalCO2Reduced: 0,
       streak: 0,
       achievements: [],
-      onboardingCompleted: true
+      onboardingCompleted: true,
+      token
     });
 
     res.status(201).json({
       success: true,
       user,
+      token,
       message: 'User created successfully'
     });
   } catch (error) {
@@ -83,7 +89,7 @@ router.post('/', (req, res) => {
 });
 
 // Get user by ID
-router.get('/:userId', (req, res) => {
+router.get('/:userId', authenticateUser, (req, res) => {
   try {
     const { userId } = req.params;
     const user = db.findById('users', userId);
@@ -99,7 +105,7 @@ router.get('/:userId', (req, res) => {
 });
 
 // Update user profile
-router.put('/:userId', (req, res) => {
+router.put('/:userId', authenticateUser, (req, res) => {
   try {
     const { userId } = req.params;
     const updates = req.body;
@@ -167,7 +173,7 @@ router.put('/:userId', (req, res) => {
 });
 
 // Recalculate baseline footprint
-router.post('/:userId/recalculate-baseline', (req, res) => {
+router.post('/:userId/recalculate-baseline', authenticateUser, (req, res) => {
   try {
     const { userId } = req.params;
     const user = db.findById('users', userId);
@@ -191,7 +197,7 @@ router.post('/:userId/recalculate-baseline', (req, res) => {
 });
 
 // Get user statistics
-router.get('/:userId/stats', (req, res) => {
+router.get('/:userId/stats', authenticateUser, (req, res) => {
   try {
     const { userId } = req.params;
     const user = db.findById('users', userId);
@@ -222,7 +228,7 @@ router.get('/:userId/stats', (req, res) => {
 });
 
 // Get user dashboard data
-router.get('/:userId/dashboard', (req, res) => {
+router.get('/:userId/dashboard', authenticateUser, (req, res) => {
   try {
     const { userId } = req.params;
     const user = db.findById('users', userId);
@@ -276,7 +282,7 @@ router.get('/:userId/dashboard', (req, res) => {
 });
 
 // Delete user
-router.delete('/:userId', (req, res) => {
+router.delete('/:userId', authenticateUser, (req, res) => {
   try {
     const { userId } = req.params;
     const deleted = db.delete('users', userId);

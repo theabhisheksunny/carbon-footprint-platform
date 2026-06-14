@@ -1,7 +1,10 @@
 import express from 'express';
 import db from '../database/inMemoryDB.js';
+import { authenticateUser } from '../utils/auth.js';
 
 const router = express.Router();
+
+router.use('/user/:userId', authenticateUser);
 
 // Get all available actions
 router.get('/', (req, res) => {
