@@ -48,6 +48,13 @@ router.post('/', (req, res) => {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
 
+    const allUsers = db.findAll('users');
+    const nameLower = name.trim().toLowerCase();
+    const nameExists = allUsers.some(u => u.name.trim().toLowerCase() === nameLower);
+    if (nameExists) {
+      return res.status(409).json({ error: 'User with this name already exists. Please choose a unique name.' });
+    }
+
     // Calculate baseline footprint
     const baselineFootprint = calculators.calculateBaselineFootprint(profile || {});
     const regionalAverage = regionalAverages[location] || regionalAverages['World'];
@@ -129,6 +136,12 @@ router.put('/:userId', (req, res) => {
     if (updates.name !== undefined) {
       if (typeof updates.name !== 'string' || updates.name.trim() === '') {
         return res.status(400).json({ error: 'Valid name is required' });
+      }
+      const allUsers = db.findAll('users');
+      const nameLower = updates.name.trim().toLowerCase();
+      const nameExists = allUsers.some(u => u.name.trim().toLowerCase() === nameLower && u.id !== userId);
+      if (nameExists) {
+        return res.status(409).json({ error: 'User with this name already exists. Please choose a unique name.' });
       }
     }
 

@@ -1899,9 +1899,39 @@
         </div>
     </div>
 
+    <!-- Profile Selection Overlay -->
+    <div id="profile-selection-overlay" class="onboard-overlay d-none">
+        <div class="onboard-modal glass-card" style="text-align: center; position: relative;">
+            <div class="wizard-header">
+                <i class="fa-solid fa-users-gear" style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"></i>
+                <h3>Select Your Eco Profile</h3>
+                <p>Welcome to the Carbon Footprint Platform. Please select your profile to enter your workspace.</p>
+            </div>
+            
+            <div class="flex-col gap-15" style="margin: 25px 0;">
+                <div class="form-group" style="text-align: left;">
+                    <label for="modal-user-selector" style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-main);">Choose Profile</label>
+                    <select id="modal-user-selector" class="form-control" style="text-align: center; text-align-last: center; font-size: 1.1rem; height: 50px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text-main);">
+                        <option value="" disabled selected>Select active user...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px;">
+                <button class="btn-premium" onclick="handleModalProfileSelect()" style="padding: 12px 30px; font-size: 1rem; border-radius: 10px; border: none; cursor: pointer;">
+                    <i class="fa-solid fa-right-to-bracket"></i> Enter Workspace
+                </button>
+                <button class="btn-secondary" onclick="triggerOnboardingFromSelection()" style="padding: 12px 30px; font-size: 1rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-main); cursor: pointer;">
+                    <i class="fa-solid fa-user-plus"></i> Create New Profile
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Onboarding wizard Overlay -->
     <div id="onboarding-overlay" class="onboard-overlay d-none">
-        <div class="onboard-modal glass-card">
+        <div class="onboard-modal glass-card" style="position: relative;">
+            <button class="modal-close-btn" onclick="cancelOnboardingWizard()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; transition: var(--transition-smooth); z-index: 10;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'"><i class="fa-solid fa-xmark"></i></button>
             <div class="wizard-progress">
                 <div class="progress-dot active" id="dot-step-1"></div>
                 <div class="progress-dot" id="dot-step-2"></div>
@@ -2297,6 +2327,48 @@
             }
         }
 
+        function openProfileSelectionOverlay() {
+            const overlay = document.getElementById('profile-selection-overlay');
+            if (overlay) {
+                overlay.classList.remove('d-none');
+            }
+        }
+
+        function closeProfileSelectionOverlay() {
+            const overlay = document.getElementById('profile-selection-overlay');
+            if (overlay) {
+                overlay.classList.add('d-none');
+            }
+        }
+
+        async function handleModalProfileSelect() {
+            const modalSelector = document.getElementById('modal-user-selector');
+            const userId = modalSelector.value;
+            if (!userId) {
+                alert('Please select a profile to continue.');
+                return;
+            }
+            await selectUser(userId);
+            closeProfileSelectionOverlay();
+        }
+
+        function triggerOnboardingFromSelection() {
+            closeProfileSelectionOverlay();
+            openOnboardingWizard();
+        }
+
+        function cancelOnboardingWizard() {
+            closeOnboardingWizard();
+            if (!currentUser) {
+                if (usersList.length > 0) {
+                    openProfileSelectionOverlay();
+                } else {
+                    openOnboardingWizard();
+                    alert('At least one profile must be onboarded to use the platform.');
+                }
+            }
+        }
+
         async function loadUsers() {
             try {
                 // Fetch list of users. Because there's no explicit list users API, we fetch the leaderboard
@@ -2307,25 +2379,46 @@
                 
                 usersList = data.leaderboard || [];
                 const selector = document.getElementById('user-selector');
+                const modalSelector = document.getElementById('modal-user-selector');
                 
                 // Clear previous except the first
-                selector.innerHTML = '<option value="" disabled selected>Select active user...</option>';
+                const defaultOptionHtml = '<option value="" disabled selected>Select active user...</option>';
+                selector.innerHTML = defaultOptionHtml;
+                if (modalSelector) {
+                    modalSelector.innerHTML = defaultOptionHtml;
+                }
                 
                 usersList.forEach(user => {
                     const opt = document.createElement('option');
                     opt.value = user.id;
                     opt.textContent = user.name;
                     selector.appendChild(opt);
+                    
+                    if (modalSelector) {
+                        const optModal = document.createElement('option');
+                        optModal.value = user.id;
+                        optModal.textContent = user.name;
+                        modalSelector.appendChild(optModal);
+                    }
                 });
 
-                if (usersList.length > 0) {
-                    // Select first user by default to display stats
-                    currentUser = usersList[0];
-                    selector.value = currentUser.id;
-                    await selectUser(currentUser.id);
+                const savedProfileId = localStorage.getItem('activeProfileId');
+                const savedUserExists = savedProfileId && usersList.some(u => u.id === savedProfileId);
+
+                if (savedUserExists) {
+                    currentUser = usersList.find(u => u.id === savedProfileId);
+                    selector.value = savedProfileId;
+                    await selectUser(savedProfileId);
+                    closeProfileSelectionOverlay();
                 } else {
-                    // No users found in database, trigger onboarding modal
-                    openOnboardingWizard();
+                    currentUser = null;
+                    selector.value = "";
+                    if (usersList.length > 0) {
+                        openProfileSelectionOverlay();
+                    } else {
+                        closeProfileSelectionOverlay();
+                        openOnboardingWizard();
+                    }
                 }
             } catch (err) {
                 console.error('Failed to load users:', err);
@@ -2340,6 +2433,9 @@
                 const data = await response.json();
                 currentUser = data.user;
                 
+                // Save to localStorage
+                localStorage.setItem('activeProfileId', userId);
+                
                 // Update dropdown select
                 document.getElementById('user-selector').value = userId;
 
@@ -2350,6 +2446,8 @@
                 showToast(`Switched profile to: ${currentUser.name}`);
             } catch (err) {
                 console.error(err);
+                localStorage.removeItem('activeProfileId');
+                await loadUsers();
             }
         }
 
@@ -3773,6 +3871,7 @@
                 });
                 if (response.ok) {
                     showToast(`Successfully deleted profile: ${currentUser.name}`);
+                    localStorage.removeItem('activeProfileId');
                     currentUser = null;
                     await loadUsers(); // reload list
                 } else {
