@@ -88,6 +88,33 @@ router.post('/', (req, res) => {
   }
 });
 
+// Login user (retrieve existing profile and token)
+router.post('/login', (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Valid email is required' });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const allUsers = db.findAll('users');
+    const user = allUsers.find(u => u.email.trim().toLowerCase() === trimmedEmail);
+
+    if (!user) {
+      return res.status(404).json({ error: 'No profile found with this email. Please onboard first.' });
+    }
+
+    res.json({
+      success: true,
+      user,
+      token: user.token,
+      message: 'Login successful'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get user by ID
 router.get('/:userId', authenticateUser, (req, res) => {
   try {
