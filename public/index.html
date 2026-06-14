@@ -1251,15 +1251,18 @@
                 </li>
             </ul>
 
-            <div class="user-profile-selector">
-                <div class="user-label">Current Profile</div>
-                <select id="user-selector" class="user-dropdown" style="margin-bottom: 8px;">
-                    <option value="" disabled selected>Select User...</option>
-                </select>
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <button class="btn-link" onclick="openOnboardingWizard()" style="font-size: 0.8rem; text-align: left; padding: 2px 0; border: none; background: none; cursor: pointer;">
-                        <i class="fa-solid fa-user-plus"></i> New Profile
-                    </button>
+            <div class="user-profile-selector" style="margin-top: auto; padding-top: 15px; border-top: 1px solid var(--glass-border);">
+                <div class="user-label" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px;">Current Profile</div>
+                <div class="active-profile-card" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16,185,129,0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div style="display: flex; flex-direction: column; overflow: hidden; text-align: left;">
+                        <span id="sidebar-user-name" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading...</span>
+                        <span id="sidebar-user-email" style="font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">loading@email.com</span>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; align-items: center; width: 100%;">
                     <button class="btn-link" onclick="deleteActiveProfile()" style="font-size: 0.8rem; color: var(--danger); text-align: right; padding: 2px 0; border: none; background: none; cursor: pointer;">
                         <i class="fa-solid fa-trash-can"></i> Delete Profile
                     </button>
@@ -1899,37 +1902,8 @@
         </div>
     </div>
 
-    <!-- Profile Selection Overlay -->
-    <div id="profile-selection-overlay" class="onboard-overlay">
-        <div class="onboard-modal glass-card" style="text-align: center; position: relative;">
-            <div class="wizard-header">
-                <i class="fa-solid fa-users-gear" style="font-size: 3rem; color: var(--primary); margin-bottom: 20px;"></i>
-                <h3>Select Your Eco Profile</h3>
-                <p>Welcome to the Carbon Footprint Platform. Please select your profile to enter your workspace.</p>
-            </div>
-            
-            <div class="flex-col gap-15" style="margin: 25px 0;">
-                <div class="form-group" style="text-align: left;">
-                    <label for="modal-user-selector" style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-main);">Choose Profile</label>
-                    <select id="modal-user-selector" class="form-control" style="text-align: center; text-align-last: center; font-size: 1.1rem; height: 50px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text-main);">
-                        <option value="" disabled selected>Select active user...</option>
-                    </select>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px;">
-                <button class="btn-premium" onclick="handleModalProfileSelect()" style="padding: 12px 30px; font-size: 1rem; border-radius: 10px; border: none; cursor: pointer;">
-                    <i class="fa-solid fa-right-to-bracket"></i> Enter Workspace
-                </button>
-                <button class="btn-secondary" onclick="triggerOnboardingFromSelection()" style="padding: 12px 30px; font-size: 1rem; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-main); cursor: pointer;">
-                    <i class="fa-solid fa-user-plus"></i> Create New Profile
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Onboarding wizard Overlay -->
-    <div id="onboarding-overlay" class="onboard-overlay d-none">
+    <div id="onboarding-overlay" class="onboard-overlay">
         <div class="onboard-modal glass-card" style="position: relative;">
             <button class="modal-close-btn" onclick="cancelOnboardingWizard()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; transition: var(--transition-smooth); z-index: 10;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'"><i class="fa-solid fa-xmark"></i></button>
             <div class="wizard-progress">
@@ -2356,11 +2330,6 @@
                     switchTab(tabName);
                 });
             });
-
-            document.getElementById('user-selector').addEventListener('change', async (e) => {
-                const userId = e.target.value;
-                await selectUser(userId);
-            });
         }
 
         async function checkServerHealth() {
@@ -2406,132 +2375,48 @@
                 .replace(/'/g, "&#039;");
         }
 
-        function openProfileSelectionOverlay() {
-            const overlay = document.getElementById('profile-selection-overlay');
-            if (overlay) {
-                overlay.classList.remove('d-none');
-            }
-        }
-
-        function closeProfileSelectionOverlay() {
-            const overlay = document.getElementById('profile-selection-overlay');
-            if (overlay) {
-                overlay.classList.add('d-none');
-            }
-        }
-
-        async function handleModalProfileSelect() {
-            const modalSelector = document.getElementById('modal-user-selector');
-            const userId = modalSelector.value;
-            if (!userId) {
-                alert('Please select a profile to continue.');
-                return;
-            }
-            await selectUser(userId);
-            closeProfileSelectionOverlay();
-        }
-
-        function triggerOnboardingFromSelection() {
-            closeProfileSelectionOverlay();
-            openOnboardingWizard();
-        }
-
         function cancelOnboardingWizard() {
-            closeOnboardingWizard();
-            if (!currentUser) {
-                const myProfileIds = getMyProfileIds();
-                const filteredUsersList = usersList.filter(user => myProfileIds.includes(user.id));
-                if (filteredUsersList.length > 0) {
-                    openProfileSelectionOverlay();
-                } else {
-                    openOnboardingWizard();
-                    alert('At least one profile must be onboarded to use the platform.');
-                }
+            if (currentUser) {
+                closeOnboardingWizard();
+            } else {
+                alert('You must configure an eco profile to use the platform.');
             }
         }
 
         async function loadUsers() {
             try {
-                // Fetch list of users. Because there's no explicit list users API, we fetch the leaderboard
-                // which includes user IDs and names of all active users in the system!
-                const response = await fetch(`${apiBaseUrl}/social/leaderboard?t=${Date.now()}`);
-                if (!response.ok) throw new Error('API Error');
-                const data = await response.json();
-                
-                usersList = data.leaderboard || [];
-                const selector = document.getElementById('user-selector');
-                const modalSelector = document.getElementById('modal-user-selector');
-                
-                // Clear previous except the first
-                const defaultOptionHtml = '<option value="" disabled selected>Select active user...</option>';
-                selector.innerHTML = defaultOptionHtml;
-                if (modalSelector) {
-                    modalSelector.innerHTML = defaultOptionHtml;
-                }
-
-                const myProfileIds = getMyProfileIds();
-                const filteredUsersList = usersList.filter(user => myProfileIds.includes(user.id));
-                
-                filteredUsersList.forEach(user => {
-                    const opt = document.createElement('option');
-                    opt.value = user.id;
-                    opt.textContent = user.name;
-                    selector.appendChild(opt);
-                    
-                    if (modalSelector) {
-                        const optModal = document.createElement('option');
-                        optModal.value = user.id;
-                        optModal.textContent = user.name;
-                        modalSelector.appendChild(optModal);
-                    }
-                });
-
                 const savedProfileId = localStorage.getItem('activeProfileId');
-                const savedUserExists = savedProfileId && filteredUsersList.some(u => u.id === savedProfileId);
-
-                if (savedUserExists) {
-                    currentUser = filteredUsersList.find(u => u.id === savedProfileId);
-                    selector.value = savedProfileId;
+                if (savedProfileId) {
                     await selectUser(savedProfileId);
-                    closeProfileSelectionOverlay();
-                } else {
-                    currentUser = null;
-                    selector.value = "";
-                    if (filteredUsersList.length > 0) {
-                        openProfileSelectionOverlay();
-                    } else {
-                        closeProfileSelectionOverlay();
-                        openOnboardingWizard();
-                    }
+                    return;
                 }
+                currentUser = null;
+                openOnboardingWizard();
             } catch (err) {
-                console.error('Failed to load users:', err);
-                openOnboardingWizard(); // fallback onboarding
+                console.error('Failed to load active user:', err);
+                openOnboardingWizard();
             }
         }
 
         async function selectUser(userId) {
             try {
-                const myProfileIds = getMyProfileIds();
-                if (!myProfileIds.includes(userId)) {
-                    throw new Error('Unauthorized profile access');
-                }
                 const response = await fetch(`${apiBaseUrl}/users/${userId}?t=${Date.now()}`);
                 if (!response.ok) throw new Error('User not found');
                 const data = await response.json();
                 currentUser = data.user;
                 
-                // Save to localStorage
                 localStorage.setItem('activeProfileId', userId);
                 
-                // Update dropdown select
-                document.getElementById('user-selector').value = userId;
+                const nameEl = document.getElementById('sidebar-user-name');
+                const emailEl = document.getElementById('sidebar-user-email');
+                if (nameEl) nameEl.textContent = currentUser.name;
+                if (emailEl) emailEl.textContent = currentUser.email;
 
-                // Sync all panels
                 await refreshDashboardData();
                 updateHeaderProgression();
                 await loadUserRoutines();
-                showToast(`Switched profile to: ${currentUser.name}`);
+                
+                closeOnboardingWizard();
             } catch (err) {
                 console.error(err);
                 localStorage.removeItem('activeProfileId');
@@ -2709,7 +2594,6 @@
 
                 const data = await response.json();
                 showToast('Welcome aboard! Baseline footprint calculated.');
-                closeOnboardingWizard();
                 
                 // Save token locally first
                 if (data.token) {
@@ -2717,11 +2601,11 @@
                 }
 
                 // Save profile ID locally to this browser session
+                localStorage.setItem('activeProfileId', data.user.id);
                 addMyProfileId(data.user.id);
                 
-                // Add to dropdown list and select
+                // Load active session (which selects the user and closes onboarding)
                 await loadUsers();
-                await selectUser(data.user.id);
                 switchTab('dashboard');
             } catch (err) {
                 alert(`Error onboarding user: ${err.message}`);
@@ -2744,7 +2628,7 @@
             }
 
             // Set welcome labels
-            document.getElementById('welcome-heading').textContent = `Eco Dashboard: ${currentUser.name}`;
+            document.getElementById('welcome-heading').textContent = `Green Greetings, ${currentUser.name}!`;
             document.getElementById('welcome-subtext').textContent = `Tracking footprint from region ${currentUser.location}`;
 
             // 1. Fetch user statistics
